@@ -1,79 +1,122 @@
 <html>
-    <style>
-        body {
-            margin: 0px;
-        }
-        canvas {
-            width: 100%;
-        }
-    </style>
-    <script>
-        const offsets = [[-1, -1], [-1, 1], [1, 1], [1, -1]]
-        const orders =  [[0, 3, 2, 1], [0, 1, 2, 3], [0, 1, 2, 3], [2, 1, 0, 3]]
-        let gradients = {}
-        let phi = 0
-        let previousTime = 0
+  <style>
+    body {
+      margin: 0px;
+    }
+    canvas {
+      width: 100%;
+    }
+  </style>
+  <script>
+    const offsets = [
+      [-1, -1],
+      [-1, 1],
+      [1, 1],
+      [1, -1],
+    ];
+    const orders = [
+      [0, 3, 2, 1],
+      [0, 1, 2, 3],
+      [0, 1, 2, 3],
+      [2, 1, 0, 3],
+    ];
+    let gradients = {};
+    let phi = 0;
+    let previousTime = 0;
 
-        const randomVector = () => {
-            const theta = Math.random() * 2 * Math.PI
-            return [Math.cos(theta), Math.sin(theta)]
-        }
+    const randomVector = () => {
+      const theta = Math.random() * 2 * Math.PI;
+      return [Math.cos(theta), Math.sin(theta)];
+    };
 
-        const dotWithGrid = (point, cell) => {
-            const direction = point.map((p, i) => {return p - cell[i]});
-            if (!gradients[cell]){
-                gradients[cell] = randomVector()
-            }
-            const gradient = gradients[cell]
-            return direction.map((d, i) => {return d * gradient[i]}).reduce((a, b) => a+b);
-        }
+    const dotWithGrid = (point, cell) => {
+      const direction = point.map((p, i) => {
+        return p - cell[i];
+      });
+      if (!gradients[cell]) {
+        gradients[cell] = randomVector();
+      }
+      const gradient = gradients[cell];
+      return direction
+        .map((d, i) => {
+          return d * gradient[i];
+        })
+        .reduce((a, b) => a + b);
+    };
 
-        const lerp = (a, b, t) => {
-            return a * (1 - t) + t * b
-        }
+    const lerp = (a, b, t) => {
+      return a * (1 - t) + t * b;
+    };
 
-        const perlin = (point, scale = 501) => {
-            const cell = point.map(p => {return Math.floor(p / scale) * scale})
-            const values = offsets.map(offset => {
-                return dotWithGrid(point, offset.map((o, i) => {
-                    return cell[i] + scale * (o + 1) / 2
-                }))
-            });
-            const ts = point.map((p, i) => {return (p - cell[i]) / scale})
-            return lerp(lerp(values[0], values[3], ts[0]), lerp(values[1], values[2], ts[0]), ts[1]) / scale
-        }
+    const perlin = (point, scale = 501) => {
+      const cell = point.map((p) => {
+        return Math.floor(p / scale) * scale;
+      });
+      const values = offsets.map((offset) => {
+        return dotWithGrid(
+          point,
+          offset.map((o, i) => {
+            return cell[i] + (scale * (o + 1)) / 2;
+          })
+        );
+      });
+      const ts = point.map((p, i) => {
+        return (p - cell[i]) / scale;
+      });
+      return (
+        lerp(
+          lerp(values[0], values[3], ts[0]),
+          lerp(values[1], values[2], ts[0]),
+          ts[1]
+        ) / scale
+      );
+    };
 
-        const hilbert = (point, size, offsets, depth = 0, maxDepth = 10) => {
-            const offset = [Math.cos(phi) * 500, Math.sin(phi) * 500]
-            const targetDepth = (perlin(point.map((p, i) => p + offset[i])) + 1 ) / 2 * maxDepth
-            
-            const featureSize = size / 4 * Math.min(1, Math.max(0, targetDepth - depth))
-            points = offsets.map(offset => point.map((p, i) => p + featureSize * offset[i]))
-            if (depth < targetDepth) {
-                return points.flatMap((point, i) => hilbert(point, size / 2, orders[i].map(j => offsets[j]), depth + 1, maxDepth))
-            }
-            return points
-        }
+    const hilbert = (point, size, offsets, depth = 0, maxDepth = 10) => {
+      const offset = [Math.cos(phi) * 500, Math.sin(phi) * 500];
+      const targetDepth =
+        ((perlin(point.map((p, i) => p + offset[i])) + 1) / 2) * maxDepth;
 
-        window.onload = () => {
-            const canvas = document.getElementById("canvas")
-            const ctx = canvas.getContext("2d")
+      const featureSize =
+        (size / 4) * Math.min(1, Math.max(0, targetDepth - depth));
+      points = offsets.map((offset) =>
+        point.map((p, i) => p + featureSize * offset[i])
+      );
+      if (depth < targetDepth) {
+        return points.flatMap((point, i) =>
+          hilbert(
+            point,
+            size / 2,
+            orders[i].map((j) => offsets[j]),
+            depth + 1,
+            maxDepth
+          )
+        );
+      }
+      return points;
+    };
 
-            const x = canvas.width / 2
-            const y = canvas.height / 2
+    window.onload = () => {
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
 
-            const animate = (time) => {
-                phi += 0.001 * (time - previousTime)
-                ctx.clearRect(0, 0, canvas.width, canvas.height)
-                ctx.beginPath()
-                ctx.strokeStyle = '#0A2A5E'
-                hilbert([x, y], canvas.width, offsets).forEach(p => ctx.lineTo(p[0], p[1]))
-                ctx.stroke()
-                previousTime = time
-                window.requestAnimationFrame(animate)
-            }
-            animate(0)
-        }
-    </script>
-    <canvas id="canvas" width="1000", height="1000"></canvas>
+      const x = canvas.width / 2;
+      const y = canvas.height / 2;
+
+      const animate = (time) => {
+        phi += 0.001 * (time - previousTime);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        ctx.strokeStyle = "#0A2A5E";
+        hilbert([x, y], canvas.width, offsets).forEach((p) =>
+          ctx.lineTo(p[0], p[1])
+        );
+        ctx.stroke();
+        previousTime = time;
+        window.requestAnimationFrame(animate);
+      };
+      animate(0);
+    };
+  </script>
+  <canvas id="canvas" width="1000" , height="1000"></canvas>
 </html>
