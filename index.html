@@ -18,34 +18,36 @@
         }
 
         const dotWithGrid = (point, cell) => {
-            const direction = point.map((p, i) => p - cell[i]);
+            const direction = point.map((p, i) => {return p - cell[i]});
             if (!gradients[cell]){
                 gradients[cell] = randomVector()
             }
             const gradient = gradients[cell]
-            return direction.map((d, i) => d * gradient[i]).reduce((a, b) => a+b);
+            return direction.map((d, i) => {return d * gradient[i]}).reduce((a, b) => a+b);
         }
 
         const lerp = (a, b, t) => {
-            return a + t * (b - a)
+            return a * (1 - t) + t * b
         }
 
-        const perlin = (point, scale = 100) => {
-            const cell = point.map(p => {Math.floor(p / scale) * scale})
+        const perlin = (point, scale = 501) => {
+            const cell = point.map(p => {return Math.floor(p / scale) * scale})
             const values = offsets.map(offset => {
-                dotWithGrid(point, offset.map((o, i) => {
-                    cell[i] + (o + 1) / 2
+                return dotWithGrid(point, offset.map((o, i) => {
+                    return cell[i] + scale * (o + 1) / 2
                 }))
             });
-            const ts = point.map((p, i) => (p - cell[i]) / scale)
-            return lerp(lerp(values[0], values[3], ts[0]), lerp(values[1], values[2], ts[0]), ts[1])
+            const ts = point.map((p, i) => {return (p - cell[i]) / scale})
+            return lerp(lerp(values[0], values[3], ts[0]), lerp(values[1], values[2], ts[0]), ts[1]) / scale
         }
 
-        const hilbert = (point, size, depth, offsets) => {
-            const featureSize = size / 4 * (Math.abs(depth) > 1 ? Math.sign(depth) : depth)
+        const hilbert = (point, size, offsets, depth = 0, maxDepth = 10) => {
+            const targetDepth = (perlin(point) + 1 )/ 2* maxDepth
+            
+            const featureSize = size / 4 * Math.min(1, Math.abs(targetDepth) - depth) * Math.sign(targetDepth)
             points = offsets.map(offset => point.map((p, i) => p + featureSize * offset[i]))
-            if (Math.abs(depth) > 1) {
-                return points.flatMap((point, i) => hilbert(point, size / 2, depth -1 * Math.sign(depth), orders[i].map(j => offsets[j])))
+            if (depth < targetDepth) {
+                return points.flatMap((point, i) => hilbert(point, size / 2, orders[i].map(j => offsets[j]), depth + 1, maxDepth))
             }
             return points
         }
@@ -56,20 +58,14 @@
 
             const x = canvas.width / 2
             const y = canvas.height / 2
-            let depth = 1;
-            let direction = 1;
 
             const animate = () => {
                 ctx.clearRect(0, 0, canvas.width, canvas.height)
                 ctx.beginPath()
                 ctx.strokeStyle = '#0A2A5E'
-                hilbert([x, y], canvas.width, depth, offsets).forEach(p => ctx.lineTo(p[0], p[1]))
+                hilbert([x, y], canvas.width, offsets).forEach(p => ctx.lineTo(p[0], p[1]))
                 ctx.stroke()
-                window.requestAnimationFrame(animate)
-                depth += 0.01 * direction
-                if (Math.abs(depth) > 7) {
-                    direction *= -1
-                }
+                // window.requestAnimationFrame(animate)
             }
             animate()
         }
