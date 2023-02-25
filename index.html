@@ -42,10 +42,10 @@
         }
 
         const hilbert = (point, size, depth, offsets) => {
-            const featureSize = size / 4 * (depth > 1 ? 1 : depth)
+            const featureSize = size / 4 * (Math.abs(depth) > 1 ? Math.sign(depth) : depth)
             points = offsets.map(offset => point.map((p, i) => p + featureSize * offset[i]))
-            if (depth > 1) {
-                return points.flatMap((point, i) => hilbert(point, size / 2, depth - 1, orders[i].map(j => offsets[j])))
+            if (Math.abs(depth) > 1) {
+                return points.flatMap((point, i) => hilbert(point, size / 2, depth -1 * Math.sign(depth), orders[i].map(j => offsets[j])))
             }
             return points
         }
@@ -67,7 +67,7 @@
                 ctx.stroke()
                 window.requestAnimationFrame(animate)
                 depth += 0.01 * direction
-                if (depth > 7 || depth <= 1) {
+                if (Math.abs(depth) > 7) {
                     direction *= -1
                 }
             }
