@@ -42,10 +42,14 @@
           return d * gradient[i];
         })
         .reduce((a, b) => a + b);
-    };
+    };  
+
+    const smootherStep = (t) => {
+      return 6 * t ** 5 - 15 * t  ** 4 + 10 * t ** 3;
+    }
 
     const lerp = (a, b, t) => {
-      return a * (1 - t) + t * b;
+      return a  - t * (a - b);
     };
 
     const perlin = (point, layer = 0, scale = 501) => {
@@ -66,9 +70,9 @@
       });
       return (
         lerp(
-          lerp(values[0], values[3], ts[0]),
-          lerp(values[1], values[2], ts[0]),
-          ts[1]
+          lerp(values[0], values[3], smootherStep(ts[0])),
+          lerp(values[1], values[2], smootherStep(ts[0])),
+          smootherStep(ts[1])
         ) / scale
       );
     };
@@ -113,7 +117,7 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.beginPath();
         ctx.strokeStyle = "#0A2A5E";
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
         ctx.lineJoin = "round";
         hilbert([x, y], canvas.width, offsets).forEach((p) =>
           ctx.lineTo(p[0], p[1])
