@@ -20,8 +20,8 @@
       [0, 1, 2, 3],
       [2, 1, 0, 3],
     ];
-    let gradients = {};
-    let phi = 0;
+    let gradients = [{}, {}];
+    let w = 0;
     let previousTime = 0;
 
     const randomVector = () => {
@@ -29,14 +29,14 @@
       return [Math.cos(theta), Math.sin(theta)];
     };
 
-    const dotWithGrid = (point, cell) => {
+    const dotWithGrid = (point, cell, layer = 0) => {
       const direction = point.map((p, i) => {
         return p - cell[i];
       });
-      if (!gradients[cell]) {
-        gradients[cell] = randomVector();
+      if (!gradients[layer][cell]) {
+        gradients[layer][cell] = randomVector();
       }
-      const gradient = gradients[cell];
+      const gradient = gradients[layer][cell];
       return direction
         .map((d, i) => {
           return d * gradient[i];
@@ -48,7 +48,7 @@
       return a * (1 - t) + t * b;
     };
 
-    const perlin = (point, scale = 501) => {
+    const perlin = (point, layer = 0, scale = 501) => {
       const cell = point.map((p) => {
         return Math.floor(p / scale) * scale;
       });
@@ -57,7 +57,8 @@
           point,
           offset.map((o, i) => {
             return cell[i] + (scale * (o + 1)) / 2;
-          })
+          }),
+          layer
         );
       });
       const ts = point.map((p, i) => {
@@ -73,9 +74,8 @@
     };
 
     const hilbert = (point, size, offsets, depth = 0, maxDepth = 10) => {
-      const offset = [Math.cos(phi) * 500, Math.sin(phi) * 500];
-      const targetDepth =
-        ((perlin(point.map((p, i) => p + offset[i])) + 1) / 2) * maxDepth;
+      const perlin3d = lerp(perlin(point, 0), perlin(point, 1), w);
+      const targetDepth = ((perlin3d + 1) / 2) * maxDepth;
 
       const featureSize =
         (size / 4) * Math.min(1, Math.max(0, targetDepth - depth));
@@ -104,12 +104,17 @@
       const y = canvas.height / 2;
 
       const animate = (time) => {
-        phi += 0.001 * (time - previousTime);
+        w += 0.0005 * (time - previousTime);
+        if (w >= 1) {
+          gradients[0] = gradients[1];
+          gradients[1] = {};
+          w = 0;
+        }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.beginPath();
         ctx.strokeStyle = "#0A2A5E";
-        ctx.lineWidth = 3
-        ctx.lineJoin = "round"
+        ctx.lineWidth = 3;
+        ctx.lineJoin = "round";
         hilbert([x, y], canvas.width, offsets).forEach((p) =>
           ctx.lineTo(p[0], p[1])
         );
